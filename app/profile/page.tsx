@@ -1,68 +1,118 @@
 import React from "react";
-import { MoveLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { LeftSidebar } from "@/components/sidebar/LeftSidebar";
 import { RightSidebar } from "@/components/sidebar/RightSidebar";
 import Link from "next/link";
-import Image from "next/image";
 import Post from "@/components/Post";
 import { myPosts } from "@/data/posts";
 import { myProfile } from "@/data/profile";
 
-const profile = () => {
+const Profile = () => {
   return (
-    <div className="flex">
-      <LeftSidebar />
-      <div className="ml-64  mr-64 w-full min-h-screen bg-black border-1 border-gray-800">
-        {/* プロフィールヘッダー */}
-        <div className="fixed left-64 right-64 flex items-center gap-4 text-white p-2 z-10 bg-black">
-          {/* 戻るボタン */}
-          <Link href="/">
-            <MoveLeft
-              className="ml-4 cursor-pointer"
-              size={20}
-              strokeWidth={3}
-            />
-          </Link>
+    <div className="flex justify-center bg-black">
+      <div className="w-full max-w-7xl flex">
+        {/* レフトサイドバー */}
+        <div className="w-1/5 xl:w-[275px]">
+          <LeftSidebar />
+        </div>
 
-          <div>
-            <p className="text-xl font-bold">{myProfile.name}</p>
-            <p className="text-sm text-gray-400">7件のポスト</p>
-          </div>
-        </div>
-        {/* プロフィール画像 */}
-        <div className="relative border-1 border-gray-800 h-40 bg-gray-800">
-          <Image
-            src={myProfile.image}
-            alt="プロフィール画像"
-            className="object-cover absolute bottom-[-40%] left-[10%]"
-            width={130}
-            height={130}
-          />
-        </div>
-        {/* プロフィール情報 */}
-        <div className="relative border-b border-gray-800">
-          <div className="absolute top-[-30%] right-[5%]">
-            <button className="bg-black text-white px-2 py-1 border-1 rounded-full border-gray-800">
-              プロフィールを編集
-            </button>
-          </div>
-          <div className="flex flex-col p-4 mt-15">
-            <p className="text-white text-xl font-bold">{myProfile.name}</p>
-            <p className="text-gray-400 text-sm">@{myProfile.userId}</p>
-            <p className="mt-2 text-white text-md">{myProfile.bio}</p>
-            <div className="mt-3 flex items-center gap-2 text-gray-400 text-sm">
-              <p className="text-white">{myProfile.following}</p>
-              <p className="">フォロー中</p>
-              <p className="text-white">{myProfile.followers}</p>
-              <p className="">フォロワー</p>
+        {/* メインコンテンツ */}
+        <div className="w-3/5 xl:w-[600px] min-h-screen border-x border-gray-800">
+          {/* プロフィールヘッダー */}
+          <div className="sticky top-0 bg-black bg-opacity-80 backdrop-blur-md z-10 p-2 border-b border-gray-800 flex items-center">
+            {/* 戻るボタン */}
+            <Link href="/" className="mr-4">
+              <ArrowLeft className="text-white" />
+            </Link>
+
+            <div>
+              <p className="text-xl font-bold text-white">{myProfile.name}</p>
+              <p className="text-sm text-gray-500">
+                {myPosts.length}件のポスト
+              </p>
             </div>
           </div>
+
+          {/* プロフィールカバー画像 */}
+          <div className="relative h-48 bg-gray-800">
+            {/* プロフィール画像 */}
+            <div className="absolute -bottom-12 sm:-bottom-16 left-4 rounded-full overflow-hidden">
+              <div className="mr-4">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-600"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* プロフィール情報 */}
+          <div className="pt-20 px-4 pb-4 border-b border-gray-800">
+            {/* プロフィール編集ボタン */}
+            <div className="flex justify-end mt-2 mb-4">
+              <button className="border border-gray-500 text-white px-4 py-1.5 rounded-full font-bold">
+                プロフィールを編集
+              </button>
+            </div>
+
+            <div>
+              <p className="text-white text-xl font-bold">{myProfile.name}</p>
+              <p className="text-gray-500 text-sm">@{myProfile.userId}</p>
+              <p className="mt-3 text-white">{myProfile.bio}</p>
+
+              {/* 登録日 */}
+              <p className="text-gray-500 mt-2 flex items-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 mr-1"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                2025年4月から参加
+              </p>
+
+              {/* フォロー・フォロワー */}
+              <div className="mt-3 flex items-center space-x-4 text-gray-300">
+                <p>
+                  <span className="font-bold text-white">
+                    {myProfile.following}
+                  </span>{" "}
+                  <span className="text-gray-500">フォロー中</span>
+                </p>
+                <p>
+                  <span className="font-bold text-white">
+                    {myProfile.followers}
+                  </span>{" "}
+                  <span className="text-gray-500">フォロワー</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* タブメニュー */}
+          <div className="flex border-b border-gray-800">
+            <button className="flex-1 py-4 text-white font-bold border-b-4 border-blue-500">
+              ポスト
+            </button>
+            <button className="flex-1 py-4 text-gray-500">返信</button>
+            <button className="flex-1 py-4 text-gray-500">メディア</button>
+            <button className="flex-1 py-4 text-gray-500">いいね</button>
+          </div>
+
+          {/* ポスト一覧 */}
+          <Post posts={myPosts} />
         </div>
-        {/* ポスト */}
-        <Post posts={myPosts} />
+
+        {/* ライトサイドバー */}
+        <div className="w-1/5 xl:w-[350px]">
+          <RightSidebar />
+        </div>
       </div>
-      <RightSidebar />
     </div>
   );
 };
-export default profile;
+
+export default Profile;

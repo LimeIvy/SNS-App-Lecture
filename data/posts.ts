@@ -8,6 +8,8 @@ export type PostData = {
   comments: number;
   retweets: number;
   likes: number;
+  isLiked?: boolean;
+  isRetweeted?: boolean;
 };
 
 // サンプル投稿データ
