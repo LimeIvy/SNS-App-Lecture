@@ -36,14 +36,17 @@
 
 ### 1. 認証 (Supabase Auth)
 
-- [ ] **Supabase:** GUI で Authentication を有効化 (Email/Password)
+- [ ] **Utils:** Supabase クライアントユーティリティ作成
+  - [ ] サーバーコンポーネント用クライアント (`utils/supabase/server.ts`)
+  - [ ] クライアントコンポーネント用クライアント (`utils/supabase/client.ts`)
+- [ ] **Middleware:** 認証状態に基づくリダイレクト Middleware (`middleware.ts`) 作成
+  - [ ] ログイン済みなら `/login`, `/register` へのアクセスを `/` へリダイレクト
+  - [ ] 未ログインなら保護されたページへのアクセスを `/login` へリダイレクト
 - [ ] **FE:** サインアップ画面 (`/signup`) の UI 作成 (メール, パスワード, 名前入力)
-- [ ] **FE:** Supabase Auth を使ったサインアップ処理の実装
 - [ ] **FE:** ログイン画面 (`/login`) の UI 作成 (メール, パスワード入力)
-- [ ] **FE:** Supabase Auth を使ったログイン処理の実装
+- [ ] **FE:** サインアップ処理の実装 (Supabase Auth 連携)
+- [ ] **FE:** ログイン処理の実装 (Supabase Auth 連携)
 - [ ] **FE:** ログアウトボタンの実装 (Supabase Auth 連携)
-- [ ] **FE:** ログイン状態の取得と表示への反映 (例: ヘッダー表示切替)
-- [ ] **FE:** 認証が必要なページへの簡易的なアクセス制御 (ログインしていなければリダイレクト)
 
 ### 2. ユーザープロフィール
 

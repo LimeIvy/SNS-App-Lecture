@@ -4,11 +4,30 @@ import Image from "next/image";
 import Link from "next/link";
 import React, { useState, useRef, useEffect } from "react";
 import { myProfile } from "@/data/profile";
+import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
 
 export const LeftSidebar = () => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("Error logging out:", error.message);
+      alert(`ログアウトエラー: ${error.message}`);
+    } else {
+      console.log("Logged out successfully");
+      alert("ログアウトしました。");
+      // ログインページへリダイレクトし、キャッシュをクリアしてサーバー側の状態も更新
+      router.push("/login");
+      router.refresh();
+    }
+  };
 
   // 外側クリック検出のための関数
   useEffect(() => {
@@ -22,14 +41,14 @@ export const LeftSidebar = () => {
         setShowMenu(false);
       }
     };
-
+    
     // イベントリスナーの登録
     document.addEventListener("mousedown", handleOutsideClick);
 
     // クリーンアップ関数
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
-    };
+    }
   }, []);
 
   return (
@@ -94,7 +113,10 @@ export const LeftSidebar = () => {
               ref={menuRef}
               className="absolute bottom-full left-3 mb-2 w-60 bg-black rounded-xl shadow-lg border border-gray-800 overflow-hidden z-50 hover:bg-gray-900"
             >
-              <button className="p-4 cursor-pointer text-white">
+              <button
+                className="p-4 cursor-pointer text-white"
+                onClick={handleLogout}
+              >
                 @{myProfile.userId}からログアウト
               </button>
             </div>

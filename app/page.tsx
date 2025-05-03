@@ -8,16 +8,16 @@ export default function home() {
   return (
     <div className="flex justify-center bg-black">
       {/* コンテンツラッパー - 大画面ではコンテンツを中央に配置 */}
-      <div className="w-full max-w-7xl flex">
+      <div className="flex w-full max-w-7xl">
         {/* レフトサイドバー */}
         <div className="w-1/5 xl:w-[275px]">
           <LeftSidebar />
         </div>
 
         {/* メインコンテンツ */}
-        <div className="w-3/5 xl:w-[600px] min-h-screen border-x border-gray-800">
+        <div className="min-h-screen w-3/5 border-x border-gray-800 xl:w-[600px]">
           {/* ヘッダー */}
-          <div className="sticky top-0 bg-black bg-opacity-80 backdrop-blur-md z-10 p-4 border-b border-gray-800">
+          <div className="bg-opacity-80 sticky top-0 z-10 border-b border-gray-800 bg-black p-4 backdrop-blur-md">
             <h1 className="text-xl font-bold text-white">ホーム</h1>
           </div>
 
