@@ -30,3 +30,10 @@
   NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
   ```
 - ターミナルで `npm install @supabase/supabase-js` を実行し、Supabase Client ライブラリをインストールした。
+
+#### 初期コミット
+
+- `.gitignore` に `.env.local` が含まれていることを確認した。
+- `git add .` で変更をステージングした。
+- `git commit -m "feat: initial project setup with Next.js, TypeScript, Tailwind, Supabase"` でコミットした。
+- `git push origin main` でリモートリポジトリにプッシュした。
