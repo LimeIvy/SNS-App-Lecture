@@ -100,6 +100,20 @@
   - トップページに仮のログアウトボタンを設置。
 - ログイン状態でトップページを表示し、ログアウトボタンをクリックするとログインページへリダイレクトされることを確認した。
 
+#### データ取得練習 (ログアウトボタンのカスタマイズ)
+
+- **ファイル:** `components/sidebar/LeftSidebar.tsx`
+- **変更箇所:** `useEffect` フックの追加、`useState` の追加、ログアウトボタンのテキスト部分の修正。
+- **内容:**
+  - `LeftSidebar` をクライアントコンポーネント (`'use client';`) にした。
+  - `useState` でユーザー名 (`userName`) を管理。
+  - `useEffect` 内で Supabase クライアント (`client.ts`) を使用。
+  - `supabase.auth.getUser()` を使用して現在のログインユーザー情報を取得。（当初 `getSession()` で試したが `getUser()` で解決）
+  - 取得したユーザー ID を使って `profile` テーブルから `name` を取得。
+  - 取得した `name` を `useState` で状態にセット。
+  - ログアウトボタンのテキストを、取得した `userName` を使って動的に表示するように変更 (例: `{userName} からログアウト`)。
+- ログイン後、サイドバーのログアウトボタンに登録した名前が表示されることを確認した。
+
 ## 2. ユーザープロフィール
 
 ### Supabase テーブル作成 (`profile`)
@@ -120,6 +134,7 @@
 - **方法:** Supabase SQL Editor を使用してデータベース関数とトリガーを作成。
 - **関数作成 (`handle_new_user`):** `auth.users` にユーザーが追加された際に実行され、`profile` テーブルに `id` (ユーザーID) と `name` (登録時に入力された名前) を挿入する PL/pgSQL 関数を作成した。
 - **トリガー作成 (`on_auth_user_created`):** `auth.users` テーブルへの `INSERT` 操作後に `handle_new_user` 関数を実行するトリガーを作成した。
+
   ```sql
   -- ユーザー登録時に自動で public.profile テーブルにデータを挿入する関数の定義
 
@@ -153,4 +168,22 @@
     execute procedure public.handle_new_user(); -- 上で定義した関数を実行
 
   ```
+
 - **確認方法:** `/register` ページから新規ユーザーを登録し、Supabase ダッシュボードの Table Editor で `profile` テーブルに、登録したユーザーの ID と名前を持つ新しい行が自動的に追加されていることを確認する。
+
+#### UI 作成 (ユーザープロフィール画面)
+
+- `app/[userId]/page.tsx`にプロフィール表示画面の基本的な UI を作成した。
+- サーバーコンポーネントとして実装し、ダミーデータを表示。
+
+#### プロフィール情報取得・表示
+
+- **ファイル:** `app/[userId]/page.tsx`
+- **変更箇所:** `async` 化、`createClient` (サーバー用) のインポート・使用、データ取得ロジック、表示部分の更新。
+- **内容:**
+  - ページコンポーネントを `async` 関数に変更。
+  - `utils/supabase/server.ts` の `createClient` を `await` 付きで呼び出し。
+  - URL パラメータの `userId` を使用して `profile` テーブルから `name`, `introduction`, `icon` を `.select().eq().single()` で取得。
+  - プロフィールが見つからない場合は `notFound()` を呼び出して 404 ページを表示。
+  - 取得したデータを JSX に反映させ、名前、自己紹介、アイコン (デフォルトパス含む) を表示。
+- **確認方法:** `/(登録済みユーザーID)` にアクセスし、Supabase の `profile` テーブルに登録されている情報が表示されること、および存在しない ID でアクセスすると 404 ページが表示されることを確認する。
