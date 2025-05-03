@@ -87,3 +87,70 @@
   - ログイン成功時にはアラート表示とホームページ (`/`) へのリダイレクト (`useRouter` 使用)。
   - ログイン失敗時にはエラー内容をコンソールとアラートで表示。
 - 登録済みのユーザー情報でログインし、成功時にトップページが表示される（リダイレクトされる）ことを確認した。
+
+#### ログアウトボタン実装
+
+- **ファイル:** `components/sidebar/LeftSidebar.tsx`
+- **変更箇所:** ファイル先頭に `'use client';` を追加、`handleLogout` 関数の追加、ボタン要素の追加 (仮配置)。
+- **内容:**
+  - `LeftSidebar`コンポーネントのログアウトボタンに`handleLogout`関数を追加
+  - `handleLogout` 関数内で `supabase.auth.signOut` を呼び出し、ログアウト処理を実行。
+  - ログアウト成功時にコンソールにメッセージを表示し、ログインページ (`/login`) へリダイレクト (`useRouter` 使用)。
+  - ログアウト失敗時にはエラー内容をコンソールとアラートで表示。
+  - トップページに仮のログアウトボタンを設置。
+- ログイン状態でトップページを表示し、ログアウトボタンをクリックするとログインページへリダイレクトされることを確認した。
+
+## 2. ユーザープロフィール
+
+### Supabase テーブル作成 (`profile`)
+
+- Supabase ダッシュボードの Table Editor を使用して `profile` テーブルを新規作成した。
+- RLS は無効 (チェックを外した)。
+- カラム構成:
+  - `id` (Type: `uuid`, Primary Key, Foreign Key to `auth.users.id`)
+    - ※ Default Value は `auth.uid()`
+  - `name` (Type: `text`, Not Nullable)
+  - `introduction` (Type: `text`, Nullable)
+  - `icon` (Type: `text`, Nullable)
+- 設定を保存し、テーブルを作成した。
+
+#### ユーザー登録時の自動プロフィール作成 (DBトリガー)
+
+- **目的:** 新規ユーザー登録時に `auth.users` テーブルと `profile` テーブルを自動で関連付ける。
+- **方法:** Supabase SQL Editor を使用してデータベース関数とトリガーを作成。
+- **関数作成 (`handle_new_user`):** `auth.users` にユーザーが追加された際に実行され、`profile` テーブルに `id` (ユーザーID) と `name` (登録時に入力された名前) を挿入する PL/pgSQL 関数を作成した。
+- **トリガー作成 (`on_auth_user_created`):** `auth.users` テーブルへの `INSERT` 操作後に `handle_new_user` 関数を実行するトリガーを作成した。
+  ```sql
+  -- ユーザー登録時に自動で public.profile テーブルにデータを挿入する関数の定義
+
+  -- 関数の作成
+  -- 新しいユーザーが作成された際に自動的に実行される
+  create function public.handle_new_user()
+  returns trigger                               -- トリガーから呼び出される関数のため trigger を返す
+  language plpgsql                              -- PL/pgSQL（PostgreSQL拡張SQL）で記述
+  security definer                              -- 実行者ではなく関数定義者（Supabaseの管理者ロール）として実行される
+  set search_path = public                      -- 関数内で使用するスキーマは public に限定する
+  as $$
+  begin
+    -- 新規ユーザー（auth.users テーブルの行）が作成された際に、
+    -- 対応する profile レコードを作成する
+    insert into public.profile (id, name)
+    values (
+      new.id,                                    -- auth.users テーブルの UUID。profile.id として使用（外部キーとして一致）
+      new.raw_user_meta_data->>'name'            -- ユーザー登録時に指定されたカスタムメタデータから "name" を取得して profile.name に設定
+    );
+
+    -- トリガー関数では通常 return new で新しい行を返す（ルール）
+    return new;
+  end;
+  $$;
+
+  -- トリガーの作成：auth.users テーブルに新しいユーザーが追加された直後に handle_new_user 関数を呼び出す
+
+  create trigger on_auth_user_created
+    after insert on auth.users                  -- ユーザーが作成された直後に発火（AFTER INSERT）
+    for each row                                -- 各行に対して1回ずつ実行
+    execute procedure public.handle_new_user(); -- 上で定義した関数を実行
+
+  ```
+- **確認方法:** `/register` ページから新規ユーザーを登録し、Supabase ダッシュボードの Table Editor で `profile` テーブルに、登録したユーザーの ID と名前を持つ新しい行が自動的に追加されていることを確認する。
