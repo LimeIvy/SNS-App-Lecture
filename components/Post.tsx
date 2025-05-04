@@ -2,116 +2,119 @@
 
 import { Heart, MessageCircle, Repeat } from "lucide-react";
 import Link from "next/link";
-import React, { useState, useEffect } from "react";
-import { PostData } from "@/data/posts";
+import React from "react";
+import Image from "next/image";
+import { PostWithProfile } from "@/types";
 
+// PostProps型：投稿の配列（PostWithProfile型）を受け取る
 type PostProps = {
-  posts: PostData[];
+  posts: PostWithProfile[];
 };
 
+// 日付を「○秒前」「○時間前」などの形式に変換する関数
+const formatTimeAgo = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) {
+    return `${diffInSeconds}秒前`;
+  }
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes}分前`;
+  }
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours}時間前`;
+  }
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `${diffInDays}日前`;
+};
+
+// 投稿コンポーネントの定義
 const Post = ({ posts }: PostProps) => {
-  // 投稿の状態を管理するステート
-  const [postsState, setPostsState] = useState<PostData[]>(posts);
-
-  // props の posts が変更されたときにステートを更新
-  useEffect(() => {
-    setPostsState(posts);
-  }, [posts]);
-
-  // いいねの処理
-  const handleLike = (e: React.MouseEvent, postId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    setPostsState((prevPosts) =>
-      prevPosts.map((post) =>
-        post.id === postId
-          ? { ...post, likes: post.likes + 1, isLiked: true }
-          : post
-      )
-    );
-  };
-
-  // リツイート/リポストの処理
-  const handleRetweet = (e: React.MouseEvent, postId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    setPostsState((prevPosts) =>
-      prevPosts.map((post) =>
-        post.id === postId
-          ? { ...post, retweets: post.retweets + 1, isRetweeted: true }
-          : post
-      )
-    );
-  };
-
-  // コメント/リプライの処理
-  const handleComment = (e: React.MouseEvent, postId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // ここに実際のコメント機能を実装することができます
-    console.log(`コメントボタンがクリックされました: ${postId}`);
-  };
-
   return (
     <div>
-      {postsState.map((post) => (
+      {/* 投稿一覧をループ表示 */}
+      {posts.map((post) => (
+        // 投稿詳細ページへのリンク（クリックでページ遷移）
         <Link
           key={post.id}
-          href={`/${post.userId}/${post.id}`}
-          className="block border-b border-gray-800 cursor-pointer hover:bg-[#060606] hover:bg-opacity-30"
+          href={`/${post.user_id}/${post.id}`}
+          className="hover:bg-opacity-30 block cursor-pointer border-b border-gray-800 hover:bg-[#060606]"
         >
           <div className="p-4">
             <div className="flex">
-              <div className="mr-4">
-                <div className="w-10 h-10 rounded-full bg-gray-600"></div>
+              {/* プロフィールアイコン表示領域 */}
+              <div className="mr-4 flex-shrink-0">
+                <div className="h-10 w-10 rounded-full">
+                  {post.profile?.icon ? (
+                    // プロフィール画像が存在する場合
+                    <Image
+                      src={post.profile.icon}
+                      alt={post.profile.name || "user icon"}
+                      width={40}
+                      height={40}
+                      className="rounded-full"
+                    />
+                  ) : (
+                    // プロフィール画像がない場合はデフォルトの丸背景
+                    <div className="h-full w-full rounded-full bg-gray-700"></div>
+                  )}
+                </div>
               </div>
-              <div>
+
+              {/* 投稿の本文とユーザー情報 */}
+              <div className="w-full">
                 <div className="flex items-center">
                   {/* ユーザー名 */}
-                  <span className="font-bold text-white mr-1">
-                    {post.username}
+                  <span className="mr-5 font-bold text-white">
+                    {post.profile?.name || "Unknown User"}
                   </span>
-                  {/* ユーザーID・投稿時間 */}
+                  {/* ユーザーIDと投稿時間 */}
                   <span className="text-gray-500">
-                    @{post.userId}・{post.time}
+                    {formatTimeAgo(post.created_at) || ""}
                   </span>
                 </div>
+
                 {/* 投稿内容 */}
-                <p className="text-white mt-1">{post.content}</p>
-                <div className="flex gap-4 sm:gap-12 items-center mt-3 text-gray-500 w-full max-w-sm">
-                  {/* リプライ */}
+                <p className="mt-1 text-white">{post.content}</p>
+                <div className="mt-3 flex w-full max-w-sm items-center gap-4 text-gray-500 sm:gap-12">
+                  {/* コメント */}
                   <button
                     className="flex items-center hover:text-blue-500"
-                    onClick={(e) => handleComment(e, post.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log("Comment clicked", post.id);
+                    }}
                   >
                     <MessageCircle size={18} />
-                    <span className="ml-1 text-xs">{post.comments}</span>
                   </button>
+
                   {/* リツイート */}
                   <button
-                    className={`flex items-center hover:text-green-500 ${
-                      post.isRetweeted ? "text-green-500" : ""
-                    }`}
-                    onClick={(e) => handleRetweet(e, post.id)}
+                    className="flex items-center hover:text-green-500"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log("Retweet clicked", post.id);
+                    }}
                   >
                     <Repeat size={18} />
-                    <span className="ml-1 text-xs">{post.retweets}</span>
                   </button>
+
                   {/* いいね */}
                   <button
-                    className={`flex items-center hover:text-pink-500 ${
-                      post.isLiked ? "text-pink-500" : ""
-                    }`}
-                    onClick={(e) => handleLike(e, post.id)}
+                    className="flex items-center hover:text-pink-500"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log("Like clicked", post.id);
+                    }}
                   >
-                    <Heart
-                      size={18}
-                      className={post.isLiked ? "fill-pink-500" : ""}
-                    />
-                    <span className="ml-1 text-xs">{post.likes}</span>
+                    <Heart size={18} />
                   </button>
                 </div>
               </div>

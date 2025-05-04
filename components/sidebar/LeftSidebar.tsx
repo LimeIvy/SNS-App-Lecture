@@ -128,7 +128,7 @@ export const LeftSidebar = () => {
           >
             <div className="flex items-center">
               <div className="mr-4">
-                <div className="h-8 w-8 rounded-full bg-gray-600">
+                <div className="h-8 w-8 rounded-full">
                   <Image
                     src={userIcon || "/default-icon.png"}
                     alt="user icon"

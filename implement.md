@@ -94,25 +94,11 @@
 - **変更箇所:** ファイル先頭に `'use client';` を追加、`handleLogout` 関数の追加、ボタン要素の追加 (仮配置)。
 - **内容:**
   - `LeftSidebar`コンポーネントのログアウトボタンに`handleLogout`関数を追加
-  - `handleLogout` 関数内で `supabase.auth.signOut` を呼び出し、ログアウト処理を実行。
+  - `handleLogout` 関数内で `utils/supabase/client.ts` から取得した `supabase.auth.signOut` を呼び出し、ログアウト処理を実行。
   - ログアウト成功時にコンソールにメッセージを表示し、ログインページ (`/login`) へリダイレクト (`useRouter` 使用)。
   - ログアウト失敗時にはエラー内容をコンソールとアラートで表示。
   - トップページに仮のログアウトボタンを設置。
 - ログイン状態でトップページを表示し、ログアウトボタンをクリックするとログインページへリダイレクトされることを確認した。
-
-#### データ取得練習 (ログアウトボタンのカスタマイズ)
-
-- **ファイル:** `components/sidebar/LeftSidebar.tsx`
-- **変更箇所:** `useEffect` フックの追加、`useState` の追加、ログアウトボタンのテキスト部分の修正。
-- **内容:**
-  - `LeftSidebar` をクライアントコンポーネント (`'use client';`) にした。
-  - `useState` でユーザー名 (`userName`) を管理。
-  - `useEffect` 内で Supabase クライアント (`client.ts`) を使用。
-  - `supabase.auth.getUser()` を使用して現在のログインユーザー情報を取得。（当初 `getSession()` で試したが `getUser()` で解決）
-  - 取得したユーザー ID を使って `profile` テーブルから `name` を取得。
-  - 取得した `name` を `useState` で状態にセット。
-  - ログアウトボタンのテキストを、取得した `userName` を使って動的に表示するように変更 (例: `{userName} からログアウト`)。
-- ログイン後、サイドバーのログアウトボタンに登録した名前が表示されることを確認した。
 
 ## 2. ユーザープロフィール
 
@@ -171,6 +157,20 @@
 
 - **確認方法:** `/register` ページから新規ユーザーを登録し、Supabase ダッシュボードの Table Editor で `profile` テーブルに、登録したユーザーの ID と名前を持つ新しい行が自動的に追加されていることを確認する。
 
+#### データ取得練習 (ログアウトボタンのカスタマイズ)
+
+- **ファイル:** `components/sidebar/LeftSidebar.tsx`
+- **変更箇所:** `useEffect` フックの追加、`useState` の追加、ログアウトボタンのテキスト部分の修正。
+- **内容:**
+  - `LeftSidebar` をクライアントコンポーネント (`'use client'`) にした。
+  - `useState` でユーザー名 (`userName`) 、ユーザーID (`userId`)、アイコンパス (`userIcon`) を管理。
+  - `useEffect` 内で Supabase クライアント (`utils/supabase/client.ts`) を使用。
+  - `supabase.auth.getUser()` を使用して現在のログインユーザー情報を取得。
+  - 取得したユーザー ID を `userId` ステートにセット。
+  - 取得した `user_metadata` から名前とアイコンパスを取得し、`userName` と `userIcon` ステートにセット。
+  - ログアウトボタンのテキストとアイコン表示、プロフィールリンクのパスを、`useState` で管理している状態を使って動的に表示するように変更。
+- ログイン後、サイドバーのログアウトボタンに登録した名前が表示され、アイコンが表示されること、プロフィールリンクが正しく設定されることを確認した。
+
 #### UI 作成 (ユーザープロフィール画面)
 
 - `app/[userId]/page.tsx`にプロフィール表示画面の基本的な UI を作成した。
@@ -187,3 +187,74 @@
   - プロフィールが見つからない場合は `notFound()` を呼び出して 404 ページを表示。
   - 取得したデータを JSX に反映させ、名前、自己紹介、アイコン (デフォルトパス含む) を表示。
 - **確認方法:** `/(登録済みユーザーID)` にアクセスし、Supabase の `profile` テーブルに登録されている情報が表示されること、および存在しない ID でアクセスすると 404 ページが表示されることを確認する。
+
+## 3. 投稿機能とタイムライン表示 (☆1)
+
+### Supabase テーブル作成 (`posts`)
+
+- Supabase ダッシュボードの Table Editor を使用して `posts` テーブルを新規作成した。
+- RLS は無効 (チェックを外した)。
+- カラム構成:
+  - `id` (Type: `uuid`, Primary Key, Default: `gen_random_uuid()`)
+  - `user_id` (Type: `uuid`, Foreign Key to `auth.users.id`)
+    - ※ UI上での関連付け設定が必要
+  - `content` (Type: `text`, Not Nullable)
+  - `created_at` (Type: `timestamptz`, Default: `now()`)
+- 設定を保存し、テーブルを作成した。
+- `posts.user_id` と `profile.id` (または `auth.users.id`) の間に外部キー制約を設定した (これにより後のデータ結合が可能になる)。
+
+### 投稿フォーム実装 (`PostForm.tsx`)
+
+- **ファイル:** `components/PostForm.tsx`
+- **変更箇所:** クライアントコンポーネント化、`useState` 追加、`handleSubmit` 関数実装、アイコン表示用 `useEffect` 追加。
+- **内容:**
+  - `'use client';` を追加。
+  - `useState` でテキストエリアの入力内容 (`content`) とユーザーアイコンパス (`userIcon`) を管理。
+  - `utils/supabase/client.ts` の `createClient` を使用。
+  - `useEffect` を追加: コンポーネントマウント時に `supabase.auth.getUser()` でユーザーIDを取得し、その **`user.id` を使って `profile` テーブルから `icon` カラムのデータを取得** し、`userIcon` state にセット。
+  - `handleSubmit` 関数で以下を実行:
+    - `supabase.auth.getUser()` でログインユーザーを確認。
+    - 入力内容 (`content`) が空でないかチェック。
+    - `supabase.from('posts').insert()` で `user_id` と `content` を `posts` テーブルに挿入。
+    - 成功時にテキストエリアをクリアし、アラートを表示。
+    - 失敗時にエラーをコンソールとアラートで表示。
+  - アイコン表示エリアを修正: `userIcon` state の値が有効な場合に `next/image` を使ってユーザーアイコンを表示
+  - テキストエリアの `value` と `onChange` を `content` state に紐付け。
+  - 「ポストする」ボタンの `onClick` に `handleSubmit` を設定し、`disabled` 属性で空投稿を防止。
+- **確認方法:** ログイン状態でホーム画面を表示し、投稿フォームの左側に自分のアイコンが表示されること、テキストエリアに入力して「ポストする」ボタンをクリックすると、Supabase の `posts` テーブルにデータが追加され、成功アラートが表示されることを確認する。
+
+### タイムライン表示実装 (`app/page.tsx`)
+
+- **ファイル:** `app/page.tsx`
+- **変更箇所:** `async` 関数化、データ取得ロジック追加、`Post` コンポーネントへのデータ渡し変更。
+- **内容:**
+  - `async function home()` に変更。
+  - `utils/supabase/server.ts` の `createClient` を `await` 付きで呼び出し。
+  - `supabase.from('posts').select('*, profile: profile(*)')` を使用して、`posts` テーブルの全データと、関連する `profile` テーブルの全データを結合して取得。
+    - `profile: profile(*)` の部分は、`posts.user_id` を外部キーとして `profile` テーブルを結合し、結果を `profile` という名前のネストされたオブジェクトとして取得する指定。
+  - `.order('created_at', { ascending: false })` で投稿を新しい順に並び替え。
+  - 取得したデータ (またはエラー時は空配列) を `Post` コンポーネントの `posts` プロパティに渡す。
+  - ダミーデータのインポート (`@/data/posts`) を削除。
+
+### 型定義の共通化 (`types/index.ts`)
+
+- **目的:** アプリケーション全体で使用する型定義を共通の場所にまとめる。
+- **ファイル:** `types/index.ts` (新規作成または編集)
+- **内容:**
+  - `Profile` インターフェースを定義。
+  - `posts` テーブルと `profile` テーブルを結合したデータの型として `PostWithProfile` インターフェースを定義し、`export` する。
+- **適用:**
+  - `app/page.tsx`: `PostWithProfile` のローカル定義を削除し、`@/types` からインポート。
+  - `components/Post.tsx`: `PostWithProfile` のインポート元を `@/app/page` から `@/types` に変更。
+
+### 投稿表示コンポーネント修正 (`Post.tsx`)
+
+- **ファイル:** `components/Post.tsx`
+- **変更箇所:** Props 型変更、`useState`/`useEffect` 削除、表示ロジック更新、インタラクション機能削除。
+- **内容:**
+  - Props (`posts`) の型を `PostData[]` から `PostWithProfile[]` (`@/types` からインポート) に変更。
+  - 内部の `useState` (`postsState`) とそれを更新する `useEffect` を削除し、Props の `posts` を直接 `map` するように変更。
+  - 投稿者の表示を `post.profile.name`, `post.profile.icon`, `post.profile.id` (または `post.user_id`) を使うように修正 (存在しない場合のフォールバック含む)。
+  - 投稿時間の表示を `post.created_at` をフォーマット (`formatTimeAgo` 関数を追加) して表示するように修正。
+  - いいね、リツイート、コメント関連の State、イベントハンドラ、カウント表示などを削除またはコメントアウト (ボタンの見た目のみ残す)。
+- **確認方法:** ホーム画面を表示し、Supabase に保存されている投稿が、投稿者の名前・アイコン・投稿内容・投稿時間と共に正しく表示されることを確認する。
