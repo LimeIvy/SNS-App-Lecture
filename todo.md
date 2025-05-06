@@ -87,7 +87,7 @@
 
 ### 1. フォロー機能
 
-- [ ] **Supabase:** GUI で `follows` テーブル作成 (id, follower_id (profiles.id), following_id (profiles.id), created_at)
+- [x] **Supabase:** GUI で `follows` テーブル作成 (id, follower_id (profiles.id), following_id (profiles.id), created_at)
 - [ ] **BE:** フォロー実行 API (`/api/users/[userId]/follow`) 作成 (DB に保存)
 - [ ] **BE:** フォロー解除 API (`/api/users/[userId]/unfollow`) 作成 (DB から削除)
 - [ ] **BE:** フォロー状態確認 API (`/api/users/[userId]/follow_status`) 作成

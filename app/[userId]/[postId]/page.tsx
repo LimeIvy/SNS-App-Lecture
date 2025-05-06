@@ -1,47 +1,174 @@
 "use client";
-import { use } from "react";
 import { ArrowLeft, Heart, MessageCircle, Repeat } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { useParams } from "next/navigation";
 import { LeftSidebar } from "@/components/sidebar/LeftSidebar";
 import { RightSidebar } from "@/components/sidebar/RightSidebar";
-import { posts } from "@/data/posts";
 import { ReplyForm } from "@/components/ReplyForm";
+import { createClient } from "@/utils/supabase/client";
+import Image from "next/image";
+import { PostWithProfile } from "@/types";
+import { useState, useEffect } from "react";
 
-export default function Page({
-  params,
-}: {
-  params: Promise<{ postId: string }>;
-}) {
-  const { postId } = use(params); // use()でPromiseを解決する！
+export default function Page() {
+  const params = useParams<{ userId: string; postId: string }>();
+  const postId = params.postId;
+  const supabase = createClient();
 
-  // 投稿データを検索
-  const post = posts.find((p) => p.id === postId);
+  const [post, setPost] = useState<PostWithProfile | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  const [isLoadingFollow, setIsLoadingFollow] = useState<boolean>(false);
 
-  // 投稿が見つからない場合は404
-  if (!post) {
-    notFound();
+  useEffect(() => {
+    if (!postId) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+
+      const { data: postData, error: fetchError } = await supabase
+        .from("posts")
+        .select("*, profile:profile(*)")
+        .eq("id", postId)
+        .single<PostWithProfile>();
+
+      if (fetchError) {
+        console.error("Post fetch error:", fetchError.message);
+        setError("投稿の読み込みに失敗しました。");
+        setPost(null);
+        setLoading(false);
+        return;
+      } else if (!postData) {
+        setError("投稿が見つかりませんでした。");
+        setPost(null);
+        setLoading(false);
+        return;
+      } else {
+        setPost(postData);
+
+        if (user && postData.user_id !== user.id) {
+          try {
+            const response = await fetch(
+              `/api/users/${postData.user_id}/follow_status`
+            );
+            if (response.ok) {
+              const data = await response.json();
+              setIsFollowing(data.isFollowing);
+            } else {
+              console.error(
+                "フォロー状態の取得に失敗しました。",
+                response.statusText
+              );
+            }
+          } catch (error) {
+            console.error(
+              "フォロー状態の取得中にエラーが発生しました。",
+              error
+            );
+          }
+        }
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [postId, supabase]);
+
+  const handleFollowToggle = async () => {
+    if (
+      !post ||
+      !currentUserId ||
+      isLoadingFollow ||
+      post.user_id === currentUserId
+    )
+      return;
+
+    setIsLoadingFollow(true);
+    const targetUserId = post.user_id;
+
+    try {
+      let response;
+      if (isFollowing) {
+        response = await fetch(`/api/users/${targetUserId}/unfollow`, {
+          method: "DELETE",
+        });
+        if (response.ok) {
+          setIsFollowing(false);
+        } else {
+          console.error("アンフォローに失敗しました。", response.statusText);
+        }
+      } else {
+        response = await fetch(`/api/users/${targetUserId}/follow`, {
+          method: "POST",
+        });
+        if (response.ok || response.status === 409) {
+          setIsFollowing(true);
+        } else {
+          console.error("フォローに失敗しました。", response.statusText);
+        }
+      }
+    } catch (error) {
+      console.error("フォロー/アンフォロー処理中にエラー:", error);
+    } finally {
+      setIsLoadingFollow(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black text-white">
+        読み込み中...
+      </div>
+    );
   }
 
-  // 返信データ（現在はダミーデータ）
-  const replies = posts.filter((p) => p.id !== postId).slice(0, 3);
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black text-red-500">
+        エラー: {error}
+      </div>
+    );
+  }
 
-  // 投稿日時をフォーマット（実際のアプリではより詳細な処理が必要）
-  const formattedDate = "午前8:00·2025年4月26日";
+  if (!post) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black text-white">
+        投稿が見つかりません。
+      </div>
+    );
+  }
+
+  const fullDate = post.created_at
+    ? new Date(post.created_at).toLocaleString("ja-JP", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+      })
+    : "";
 
   return (
     <div className="flex justify-center bg-black">
       {/* コンテンツラッパー - 大画面ではコンテンツを中央に配置 */}
-      <div className="w-full max-w-7xl flex">
+      <div className="flex w-full max-w-7xl">
         {/* レフトサイドバー */}
         <div className="w-1/5 xl:w-[275px]">
           <LeftSidebar />
         </div>
 
         {/* メインコンテンツ */}
-        <div className="w-3/5 xl:w-[600px] min-h-screen border-x border-gray-800">
+        <div className="min-h-screen w-3/5 border-x border-gray-800 xl:w-[600px]">
           {/* ヘッダー */}
-          <div className="sticky top-0 bg-black bg-opacity-80 backdrop-blur-md z-10 p-4 border-b border-gray-800 flex items-center">
+          <div className="bg-opacity-80 sticky top-0 z-10 flex items-center border-b border-gray-800 bg-black p-4 backdrop-blur-md">
             <Link href="/" className="mr-4">
               <ArrowLeft className="text-white" />
             </Link>
@@ -50,38 +177,69 @@ export default function Page({
 
           {/* 投稿詳細 */}
           <div className="border-b border-gray-800 p-4">
-            {/* 投稿者情報 */}
-            <div className="flex items-start mb-3">
-              <div className="mr-3">
-                <div className="w-12 h-12 rounded-full bg-gray-600 overflow-hidden"></div>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center">
+                <Link
+                  href={`/${post.profile?.id || post.user_id}`}
+                  className="mr-3"
+                >
+                  <div className="h-12 w-12 overflow-hidden rounded-full bg-gray-600">
+                    <Image
+                      src={post.profile?.icon || "/default-icon.png"}
+                      alt={post.profile?.name || "user icon"}
+                      width={48}
+                      height={48}
+                    />
+                  </div>
+                </Link>
+                <div>
+                  <Link href={`/${post.profile?.id || post.user_id}`}>
+                    <p className="font-bold text-white">
+                      {post.profile?.name || "Unknown User"}
+                    </p>
+                  </Link>
+                </div>
               </div>
-              <div>
-                <p className="font-bold text-white">{post.username}</p>
-                <p className="text-gray-500">@{post.userId}</p>
-              </div>
+              {currentUserId && post.user_id !== currentUserId && (
+                <button
+                  className={`rounded-full px-4 py-1.5 text-sm font-bold ${
+                    isLoadingFollow
+                      ? "cursor-not-allowed border border-gray-600 bg-gray-700 text-gray-400"
+                      : isFollowing
+                        ? "border border-gray-500 bg-transparent text-white hover:border-red-600 hover:bg-red-900/30 hover:text-red-500"
+                        : "border-0 bg-white text-black hover:bg-gray-200"
+                  }`}
+                  onClick={handleFollowToggle}
+                  disabled={isLoadingFollow}
+                >
+                  {isLoadingFollow
+                    ? "処理中..."
+                    : isFollowing
+                      ? "フォロー中"
+                      : "フォローする"}
+                </button>
+              )}
             </div>
 
             {/* 投稿内容 */}
             <div className="mb-4">
-              <p className="text-white text-xl whitespace-pre-wrap mb-4">
+              <p className="mb-4 text-xl whitespace-pre-wrap text-white">
                 {post.content}
               </p>
 
-              {/* 投稿時間 */}
-              <p className="text-gray-500 mt-4 pb-4 border-b border-gray-800">
-                {formattedDate}
+              <p className="mt-4 border-b border-gray-800 pb-4 text-gray-500">
+                <time dateTime={post.created_at}>{fullDate}</time>
               </p>
             </div>
 
             {/* アクションボタン */}
-            <div className="flex gap-12 items-center mt-3 text-gray-500 w-full max-w-sm">
+            <div className="mt-3 flex w-full max-w-sm items-center gap-12 text-gray-500">
               {/* リプライ */}
               <button
                 className="flex items-center hover:text-blue-500"
                 onClick={(e) => e.stopPropagation()}
               >
                 <MessageCircle size={18} />
-                <span className="ml-1 text-xs">{post.comments}</span>
               </button>
               {/* リツイート */}
               <button
@@ -89,7 +247,6 @@ export default function Page({
                 onClick={(e) => e.stopPropagation()}
               >
                 <Repeat size={18} />
-                <span className="ml-1 text-xs">{post.retweets}</span>
               </button>
               {/* いいね */}
               <button
@@ -97,55 +254,11 @@ export default function Page({
                 onClick={(e) => e.stopPropagation()}
               >
                 <Heart size={18} />
-                <span className="ml-1 text-xs">{post.likes}</span>
               </button>
             </div>
           </div>
 
-          {/* 返信入力フォーム */}
-          <ReplyForm postId={postId} userId={post.userId} />
-
-          {/* 返信一覧 */}
-          <div>
-            <h2 className="font-bold text-white text-xl p-4">返信</h2>
-            {replies.map((reply) => (
-              <div key={reply.id} className="border-b border-gray-800 p-4">
-                <div className="flex">
-                  <div className="mr-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-600"></div>
-                  </div>
-                  <div>
-                    <div className="flex items-center">
-                      <span className="font-bold text-white mr-1">
-                        {reply.username}
-                      </span>
-                      <span className="text-gray-500">
-                        @{reply.userId}・{reply.time}
-                      </span>
-                    </div>
-                    <span className="text-gray-500">
-                      返信先: @{post.userId}
-                    </span>
-                    <p className="text-white mt-1">{reply.content}</p>
-                    <div className="flex gap-12 items-center mt-3 text-gray-500 w-full max-w-sm">
-                      <button className="flex items-center hover:text-blue-500">
-                        <MessageCircle size={18} />
-                        <span className="ml-1 text-xs">{reply.comments}</span>
-                      </button>
-                      <button className="flex items-center hover:text-green-500">
-                        <Repeat size={18} />
-                        <span className="ml-1 text-xs">{reply.retweets}</span>
-                      </button>
-                      <button className="flex items-center hover:text-pink-500">
-                        <Heart size={18} />
-                        <span className="ml-1 text-xs">{reply.likes}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ReplyForm postId={postId} userId={post.user_id} />
         </div>
 
         {/* ライトサイドバー */}

@@ -26,7 +26,6 @@ export const PostForm = () => {
           console.error("Error fetching user icon:", error.message);
         } else if (profile) {
           setUserIcon(profile.icon);
-          console.log(profile.icon);
         }
       }
     };
