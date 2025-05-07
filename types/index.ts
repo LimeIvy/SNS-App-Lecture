@@ -15,3 +15,17 @@ export interface PostWithProfile {
   created_at: string;
   profile: Profile; // 上で定義した Profile 型を使用 (存在しない場合も考慮)
 }
+
+// replies テーブルの基本的な型
+export interface Reply {
+  id: number;
+  user_id: string;
+  post_id: string;
+  content: string;
+  created_at: string;
+}
+
+// replies テーブルと profile テーブルを結合したデータの型
+export interface ReplyWithProfile extends Reply {
+  profile: Profile | null;
+}

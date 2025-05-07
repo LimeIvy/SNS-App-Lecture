@@ -7,7 +7,7 @@ import { RightSidebar } from "@/components/sidebar/RightSidebar";
 import { ReplyForm } from "@/components/ReplyForm";
 import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
-import { PostWithProfile } from "@/types";
+import { PostWithProfile, ReplyWithProfile } from "@/types";
 import { useState, useEffect } from "react";
 
 export default function Page() {
@@ -22,12 +22,18 @@ export default function Page() {
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [isLoadingFollow, setIsLoadingFollow] = useState<boolean>(false);
 
+  const [replies, setReplies] = useState<ReplyWithProfile[]>([]);
+  const [isLoadingReplies, setIsLoadingReplies] = useState<boolean>(false);
+  const [repliesError, setRepliesError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!postId) return;
 
     const fetchData = async () => {
       setLoading(true);
       setError(null);
+      setIsLoadingReplies(true);
+      setRepliesError(null);
 
       const {
         data: { user },
@@ -45,11 +51,13 @@ export default function Page() {
         setError("投稿の読み込みに失敗しました。");
         setPost(null);
         setLoading(false);
+        setIsLoadingReplies(false);
         return;
       } else if (!postData) {
         setError("投稿が見つかりませんでした。");
         setPost(null);
         setLoading(false);
+        setIsLoadingReplies(false);
         return;
       } else {
         setPost(postData);
@@ -75,8 +83,26 @@ export default function Page() {
             );
           }
         }
+
+        try {
+          const repliesResponse = await fetch(`/api/posts/${postId}/replies`);
+          if (repliesResponse.ok) {
+            const repliesData = await repliesResponse.json();
+            setReplies(repliesData || []);
+          } else {
+            console.error(
+              "返信一覧の取得に失敗しました。",
+              repliesResponse.statusText
+            );
+            setRepliesError("返信の読み込みに失敗しました。");
+          }
+        } catch (e) {
+          console.error("返信一覧の取得中にエラーが発生しました。", e);
+          setRepliesError("返信の読み込み中にエラーが発生しました。");
+        }
       }
       setLoading(false);
+      setIsLoadingReplies(false);
     };
 
     fetchData();
@@ -120,6 +146,10 @@ export default function Page() {
     } finally {
       setIsLoadingFollow(false);
     }
+  };
+
+  const handleReplySuccess = (newReply: unknown) => {
+    setReplies((prevReplies) => [newReply as ReplyWithProfile, ...prevReplies]);
   };
 
   if (loading) {
@@ -183,7 +213,7 @@ export default function Page() {
                   href={`/${post.profile?.id || post.user_id}`}
                   className="mr-3"
                 >
-                  <div className="h-12 w-12 overflow-hidden rounded-full bg-gray-600">
+                  <div className="h-12 w-12 overflow-hidden rounded-full">
                     <Image
                       src={post.profile?.icon || "/default-icon.png"}
                       alt={post.profile?.name || "user icon"}
@@ -258,7 +288,89 @@ export default function Page() {
             </div>
           </div>
 
-          <ReplyForm postId={postId} userId={post.user_id} />
+          <ReplyForm
+            postId={postId}
+            userId={post.user_id}
+            onReplySuccess={handleReplySuccess}
+          />
+
+          <div className="border-t border-gray-800">
+            {isLoadingReplies && (
+              <p className="p-4 text-center text-gray-500">
+                返信を読み込み中...
+              </p>
+            )}
+            {repliesError && (
+              <p className="p-4 text-center text-red-500">
+                エラー: {repliesError}
+              </p>
+            )}
+            {!isLoadingReplies &&
+              !repliesError &&
+              replies.length > 0 &&
+              replies.map((reply) => (
+                <div
+                  key={reply.id}
+                  className="border-b border-gray-800 p-4 hover:bg-gray-900/50"
+                >
+                  <div className="flex">
+                    <Link
+                      href={`/${reply.profile?.id || reply.user_id}`}
+                      className="mr-3 flex-shrink-0"
+                    >
+                      <Image
+                        src={reply.profile?.icon || "/default-icon.png"}
+                        alt={reply.profile?.name || "user icon"}
+                        width={40}
+                        height={40}
+                        className="rounded-full"
+                      />
+                    </Link>
+                    <div className="flex-grow">
+                      <div className="flex items-center">
+                        <Link href={`/${reply.profile?.id || reply.user_id}`}>
+                          <span className="font-bold text-white">
+                            {reply.profile?.name || "Unknown User"}
+                          </span>
+                        </Link>
+                        <span className="ml-2 text-sm text-gray-500">
+                          {new Date(reply.created_at).toLocaleDateString(
+                            "ja-JP",
+                            { month: "long", day: "numeric" }
+                          )}
+                        </span>
+                      </div>
+                      <p className="mt-1 whitespace-pre-wrap text-white">
+                        {reply.content}
+                      </p>
+                      <div className="mt-3 flex items-center gap-12 text-gray-500">
+                        {/* リプライ */}
+                        <button
+                          className="flex items-center hover:text-blue-500"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MessageCircle size={16} />
+                        </button>
+                        {/* リツイート */}
+                        <button
+                          className="flex items-center hover:text-green-500"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Repeat size={16} />
+                        </button>
+                        {/* いいね */}
+                        <button
+                          className="flex items-center hover:text-pink-500"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Heart size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
         </div>
 
         {/* ライトサイドバー */}

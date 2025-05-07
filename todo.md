@@ -77,6 +77,48 @@
 - [ ] **FE:** 投稿に「いいね」ボタンの UI を追加 (機能は ☆2)
 - [ ] **FE:** プロフィール画面に「フォロー」ボタンの UI を追加 (機能は ☆2)
 
+### 5. 返信 (コメント) 機能
+
+- [x] **Supabase:** GUI で `replies` テーブルを新規作成 (id, user_id (profiles.id), post_id (posts.id), content, created_at)
+- [x] **BE:** 返信作成 API (`/api/posts/[postId]/reply`) 作成 (DB に保存)
+- [x] **FE:** 返信入力フォーム UI (投稿の下など) と API 連携
+- [ ] **BE:** 特定投稿への返信一覧取得 API (`/api/posts/[postId]/replies`) 作成
+- [ ] **FE:** 投稿詳細画面などで返信一覧を表示 (任意)
+
+### 6. リツイート機能 (シンプルなリポスト)
+
+- [ ] **Supabase:** GUI で `retweets` テーブル作成 (id, user_id (profiles.id), post_id (posts.id), created_at)
+- [ ] **BE:** リツイート実行 API (`/api/posts/[postId]/retweet`) 作成
+- [ ] **BE:** リツイート解除 API (`/api/posts/[postId]/unretweet`) 作成
+- [ ] **BE:** ホームタイムライン API でリツイートも取得するように修正
+- [ ] **FE:** リツイートボタン UI と API 連携、リツイート数の表示
+- [ ] **FE:** タイムラインでのリツイート表示 (「〇〇さんがリツイート」)
+
+### 7. 引用リポスト機能
+
+- [ ] **Supabase:** GUI で `posts` テーブルに `quoted_post_id` (posts.id への FK, nullable) カラム追加
+- [ ] **BE:** 引用リポスト作成 API (`/api/posts/quote`) 作成
+- [ ] **FE:** 引用リポスト作成用モーダル UI と API 連携
+- [ ] **FE:** タイムラインでの引用リポスト表示
+
+### 8. ハッシュタグ機能
+
+- [ ] **Supabase:** GUI で `hashtags` (id, name), `post_hashtags` (post_id, hashtag_id) テーブル作成
+- [ ] **BE:** 投稿作成/編集時にハッシュタグを抽出し DB に保存/関連付けする処理
+- [ ] **FE:** 投稿本文中のハッシュタグをリンク化 (`/explore/tags/[tagName]`)
+- [ ] **BE:** 特定ハッシュタグの投稿一覧取得 API (`/api/tags/[tagName]/posts`) 作成
+- [ ] **FE:** ハッシュタグ別投稿一覧画面 (`/explore/tags/[tagName]`) の作成と API 連携
+
+### 9. 検索機能 (投稿内容)
+
+- [ ] **BE:** 投稿内容検索 API (`/api/search/posts?q=keyword`) 作成 (簡単な部分一致検索)
+- [ ] **FE:** 検索バー UI コンポーネント作成
+- [ ] **FE:** 検索結果表示画面 (`/search`) の作成と API 連携
+
+### 10. 無限スクロール
+
+- [ ] **FE:** 各タイムライン (ホーム, ユーザー, ハッシュタグ, 検索結果) で無限スクロールを実装 (ページネーション API 連携)
+
 ---
 
 ## ☆2: 主要機能の実装 (アプリらしく！)
@@ -115,9 +157,9 @@
 
 ### 5. 返信 (コメント) 機能
 
-- [ ] **Supabase:** GUI で `comments` テーブルを新規作成 (id, user_id (profiles.id), post_id (posts.id), content, created_at)
-- [ ] **BE:** 返信作成 API (`/api/posts/[postId]/reply`) 作成 (DB に保存)
-- [ ] **FE:** 返信入力フォーム UI (投稿の下など) と API 連携
+- [x] **Supabase:** GUI で `replies` テーブルを新規作成 (id, user_id (profiles.id), post_id (posts.id), content, created_at)
+- [x] **BE:** 返信作成 API (`/api/posts/[postId]/reply`) 作成 (DB に保存)
+- [x] **FE:** 返信入力フォーム UI (投稿の下など) と API 連携
 - [ ] **BE:** 特定投稿への返信一覧取得 API (`/api/posts/[postId]/replies`) 作成
 - [ ] **FE:** 投稿詳細画面などで返信一覧を表示 (任意)
 
