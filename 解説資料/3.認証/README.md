@@ -9,28 +9,22 @@
 - ログインしているユーザーがログアウトできるようにする（ログアウト）。
 - ログインしていないと見れないページへのアクセスを制限する仕組み（Middleware）の基本を導入する。
 
-## 2. 座学: アプリの「カギ」を持つ仕組み
+## 2. 実装: 認証機能を一つずつ作ろう
 
-認証の基本的な考え方や、今回使用するSupabase Auth、パスワードの安全性、Middlewareについては、以下の資料で詳しく解説しています。
-実装を始める前に、ぜひ一度目を通してみてください。
-
-[➡️ 座学: アプリの「カギ」を持つ仕組み（認証）](./座学-認証とは.md)
-
-## 3. 実装: 認証機能を一つずつ作ろう
-
-### 3.1. Supabaseの認証設定を確認しよう
+### 2.1. Supabaseの認証設定を確認しよう
 
 まず、Supabase側でメールアドレスとパスワードを使った認証が有効になっているか、また開発をスムーズに進めるための設定を確認します。
 
 1.  **Supabaseプロジェクトダッシュボードを開く:** チャプター2で作成したSupabaseプロジェクトにアクセスします。
 2.  **認証設定へ移動:** 左側のメニューから「Authentication」を選び、その中の「Providers」セクションに移動します。
-    （画像イメージ: `../../資料/2. 認証/1.png` - Supabase Auth Providersページへの導線）
+    ![Supabase1](../../Materials/2.Auth/1.png)
 3.  **Emailプロバイダーの確認:** 「Email」が有効 (Enabled) になっていることを確認します。通常はデフォルトで有効です。
+    ![Supabase2](../../Materials/2.Auth/2.png)
 4.  **メール確認を一時的に無効化 (開発用):**
     - 同じ「Providers」セクションの「Email」プロバイダーの設定を開きます（通常、トグルスイッチの隣にある設定アイコンやリンク）。
     - 「Confirm email」という項目のトグルスイッチを **オフ** にします。これにより、新規登録時に確認メールのステップを省略でき、開発中のテストが容易になります。
     - **注意:** 本番環境のアプリケーションでは、セキュリティのため「Confirm email」を有効にすることが強く推奨されます。
-      （画像イメージ: `../../資料/2. 認証/screenshot_confirm_email_disabled.png` - Confirm emailを無効にする設定画面のスクリーンショットを想定。もしなければ `1.png` を流用し、説明で補足）
+      ![Supabase2](../../Materials/2.Auth/3.png)
     - 設定を変更したら、忘れずに保存します。
 
 ### 3.2. ユーザー登録ページ (UI作成)
@@ -40,30 +34,26 @@
 - **ファイルパス:** `app/register/page.tsx` (まだなければ新規作成)
 
 ```tsx
+// app/register/page.tsx
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
-// import Image from "next/image"; // ロゴを表示する場合はコメントアウトを解除
-// import Link from "next/link"; // ログインページへのリンクが必要な場合はコメントアウトを解除
+import Image from "next/image";
+import Link from "next/link";
+import { useState } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
-  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!name) {
-      alert("名前を入力してください。");
-      return;
-    }
-
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: email,
       password: password,
       options: {
@@ -77,72 +67,102 @@ export default function RegisterPage() {
       console.error("Error signing up:", error.message);
       alert(`登録エラー: ${error.message}`);
     } else {
-      alert("登録が完了しました。ホームページに移動します。");
-      router.push('/');
+      console.log("Sign up successful:", data);
+      alert("登録が完了しました。");
+
+      router.push("/");
       router.refresh();
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col justify-center items-center text-white">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-xs">
-        {/* <Image src="/X.png" alt="logo" width={60} height={60} className="mx-auto mb-6" /> */}
-        <h1 className="text-2xl font-bold mb-6 text-center">アカウントを作成</h1>
-        <form onSubmit={handleRegister} className="space-y-4">
+    <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="w-full max-w-md space-y-6 rounded-lg border border-gray-700 bg-black p-8 shadow-md">
+        <Image
+          src="/X.png"
+          alt="logo"
+          width={80}
+          height={80}
+          className="mx-auto"
+        />
+        <h2 className="text-center text-3xl font-bold text-white">
+          アカウントを作成
+        </h2>
+        <form className="space-y-6" onSubmit={handleSubmit}>
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-300">
+            <label
+              htmlFor="name"
+              className="block text-sm font-medium text-white"
+            >
               名前
             </label>
             <input
               id="name"
+              name="name"
               type="text"
+              required
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-white focus:border-blue-400 focus:outline-none sm:text-sm"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              required
-              className="mt-1 block w-full p-2 rounded bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-300">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-white"
+            >
               メールアドレス
             </label>
             <input
               id="email"
+              name="email"
               type="email"
+              required
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-white focus:border-blue-400 focus:outline-none sm:text-sm"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
-              className="mt-1 block w-full p-2 rounded bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300">
-              パスワード (6文字以上)
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-white"
+            >
+              パスワード
             </label>
             <input
               id="password"
+              name="password"
               type="password"
+              required
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-white focus:border-blue-400 focus:outline-none sm:text-sm"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="mt-1 block w-full p-2 rounded bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150"
-          >
-            アカウントを作成する
-          </button>
+          <div className="flex items-center justify-center">
+            <button
+              type="submit"
+              className="mt-3 w-full cursor-pointer rounded-md border bg-white py-2 font-semibold text-black hover:bg-gray-200 hover:shadow-lg"
+            >
+              アカウントを作成する
+            </button>
+          </div>
+          <div className="flex items-center justify-center">
+            <p className="text-white">アカウントをお持ちの方は</p>
+            <Link
+              href="/login"
+              className="relative text-blue-400 after:absolute after:bottom-0 after:left-0 after:h-[1px] after:w-0 after:bg-blue-500 hover:after:w-full"
+            >
+              ログイン
+            </Link>
+          </div>
         </form>
-        {/* <p className="mt-4 text-center text-sm">
-          アカウントをお持ちですか？ <Link href="/login" className="text-blue-400 hover:text-blue-300">ログイン</Link>
-        </p> */}
       </div>
     </div>
   );
 }
+
 ```
 
 - **ポイント:**
@@ -167,92 +187,107 @@ export default function RegisterPage() {
 // app/login/page.tsx
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
+import Image from "next/image";
+import Link from "next/link";
+import { useState } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
 
-    try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
 
-      if (signInError) {
-        setError(signInError.message);
-        console.error("Sign in error:", signInError.message);
-        return;
-      }
+    if (error) {
+      console.error("Error signing in:", error.message);
+      alert(`ログインエラー: ${error.message}`);
+    } else {
+      console.log("Sign in successful:", data);
+      alert("ログインしました。");
 
-      alert('ログインしました。ホームページに移動します。');
-      router.push('/'); // ホームページへリダイレクト
-      router.refresh(); // サーバーコンポーネントを再読み込みさせるため
-
-    } catch (err: any) {
-      setError('予期せぬエラーが発生しました。');
-      console.error("Unexpected error during sign in:", err);
+      router.push("/");
+      router.refresh();
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col justify-center items-center text-white">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">ログイン</h1>
-        <form onSubmit={handleLogin}>
-          <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
+    <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="w-full max-w-md space-y-6 rounded-lg border border-gray-700 bg-black p-8 shadow-md">
+        <Image
+          src="/X.png"
+          alt="logo"
+          width={80}
+          height={80}
+          className="mx-auto"
+        />
+        <h2 className="text-center text-3xl font-bold text-white">ログイン</h2>
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-white"
+            >
               メールアドレス
             </label>
             <input
-              type="email"
               id="email"
+              name="email"
+              type="email"
+              required
+              className="mt-1 block w-full rounded-md border border-gray-300 bg-black px-3 py-2 text-white focus:border-blue-400 focus:outline-none sm:text-sm"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
-          <div className="mb-6">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-white"
+            >
               パスワード
             </label>
             <input
-              type="password"
               id="password"
+              name="password"
+              type="password"
+              required
+              className="mt-1 block w-full rounded-md border border-gray-300 bg-black px-3 py-2 text-white focus:border-blue-400 focus:outline-none sm:text-sm"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
-          {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150"
-          >
-            ログイン
-          </button>
+          <div className="flex items-center justify-center">
+            <button
+              type="submit"
+              className="mt-3 w-full cursor-pointer rounded-md border bg-white py-2 font-semibold text-black hover:bg-gray-200 hover:shadow-lg"
+            >
+              ログイン
+            </button>
+          </div>
+          <div className="flex items-center justify-center">
+            <p className="mr-1 text-white">アカウントをお持ちでない方は</p>
+            <Link
+              href="/register"
+              className="relative text-blue-400 after:absolute after:bottom-0 after:left-0 after:h-[1px] after:w-0 after:bg-blue-500 hover:after:w-full"
+            >
+              作成
+            </Link>
+          </div>
         </form>
-        <p className="mt-6 text-center text-sm">
-          アカウントをお持ちでないですか？{' '}
-          <a href="/register" className="text-blue-400 hover:text-blue-300">
-            新規登録はこちら
-          </a>
-        </p>
       </div>
     </div>
   );
 }
+
 ```
 
 - **ポイント:**
@@ -361,5 +396,3 @@ export default function RootLayout({
   );
 }
 ```
-
-（画像イメージ: `
