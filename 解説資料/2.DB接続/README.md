@@ -75,19 +75,20 @@ X-Clone/
 
 ```typescript
 // utils/supabase/client.ts
-import { createBrowserClient } from '@supabase/ssr'
+import { createBrowserClient } from "@supabase/ssr";
 
 export function createClient() {
-  // .env.local から環境変数を取得
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+  // 環境変数から Supabase の URL と Anon Key を取得してクライアントを作成
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 }
+
 ```
 
 - `createBrowserClient` 関数を使って、ブラウザ環境用のSupabaseクライアントを作成します。
-- `process.env.NEXT_PUBLIC_SUPABASE_URL` と `process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY` で、`.env.local` に設定した値を取得しています。末尾の `!` は「この値は絶対に存在するはずだ」とTypeScriptに伝えるためのものです（Non-null assertion operator）。
+- `process.env.NEXT_PUBLIC_SUPABASE_URL` と `process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY` で、`.env.local` に設定した値を取得しています。末尾の `!` は「この値は絶対に存在するはずだ」とTypeScriptに伝えるためのものです。
 
 #### 3.4.2. サーバーコンポーネント・サーバーアクション・APIルート用 (`utils/supabase/server.ts`)
 
@@ -95,26 +96,37 @@ export function createClient() {
 
 ```typescript
 // utils/supabase/server.ts
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+// SupabaseのSSR（サーバーサイドレンダリング）用クライアントを作成する関数をインポート
+import { createServerClient } from "@supabase/ssr";
 
+// Next.jsのcookies関数をインポート（サーバー側でCookieにアクセスするために使用）
+import { cookies } from "next/headers";
+
+// Supabaseクライアントを作成する非同期関数
 export async function createClient() {
-  const cookieStore = cookies(); // cookies() は await 不要な場合がありますが、プロジェクトに合わせてください。
+  // Cookieストアを取得（ここで取得したCookieにセッション情報などが含まれる）
+  const cookieStore = await cookies();
 
+  // Supabaseクライアントを作成して返す
   return createServerClient(
+    // SupabaseのURLと匿名キーを環境変数から取得
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // Cookieの読み書きを定義（Supabaseがセッション情報を扱うために使用）
       cookies: {
+        // クライアントからすべてのCookieを取得する関数
         getAll() {
           return cookieStore.getAll();
         },
+        // Supabaseが必要とするCookieをサーバーにセットする関数
         setAll(cookiesToSet) {
           try {
+            // 取得したすべてのCookie情報をcookieStoreに書き込む
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             );
-          } catch (error) {
+          } catch {
             // エラーが発生した場合（たとえばServer Componentで呼び出された場合など）、
             // 何もせずスルーする。ミドルウェアなどでセッションを更新している場合は問題ない。
           }
@@ -123,11 +135,11 @@ export async function createClient() {
     }
   );
 }
+
 ```
 
 - `createServerClient` 関数を使って、サーバー環境用のSupabaseクライアントを作成します。
-- ユーザーの認証状態を管理するためにクッキー (`cookies`) の処理が含まれており、`getAll` と `setAll` を使ってNext.jsのCookieストアと連携します。
-- `next/headers` から `cookies` をインポートして使用します。
+- ユーザーの認証状態を管理するためにクッキー (`cookies`) の処理が含まれています。
 
 **これで、Next.jsプロジェクトからSupabaseに接続するための準備が整いました！**
 
