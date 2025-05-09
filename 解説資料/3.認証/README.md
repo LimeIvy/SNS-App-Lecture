@@ -30,8 +30,13 @@
 ### 3.2. ユーザー登録ページ (UI作成)
 
 ユーザーがアカウントを作成するための入力フォームとページを作成します。
-
-- **ファイルパス:** `app/register/page.tsx` (まだなければ新規作成)
+以下の場所に、**register**フォルダとpage.tsxを作成してください
+```
+X-Clone/
+└── app/
+    └── register/
+        └── page.tsx
+```
 
 ```tsx
 // app/register/page.tsx
@@ -53,7 +58,7 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email: email,
       password: password,
       options: {
@@ -67,7 +72,6 @@ export default function RegisterPage() {
       console.error("Error signing up:", error.message);
       alert(`登録エラー: ${error.message}`);
     } else {
-      console.log("Sign up successful:", data);
       alert("登録が完了しました。");
 
       router.push("/");
@@ -175,7 +179,15 @@ export default function RegisterPage() {
   - エラーがあれば表示し、成功すればホームページにリダイレクトします。
   - `router.refresh()` は、リダイレクト後にサーバー側の状態（特に認証状態に関連するリダイレクトなど）を更新するために呼び出しています。
 
-（画像イメージ: `../../資料/2. 認証/2.png` - 作成した新規登録ページのスクリーンショット）
+**このページが完成したら、http://localhost:3000/register**を開いてみましょう　以下のように表示されると思います。
+### 完成後の写真
+  ![Supabase1](../../Materials/2.Auth/7.png)
+
+  **アカウントを作成すると、画面に「登録が完了しました。」と表示され、http://localhost:3000 に移動すると思います。**
+
+  **また、Supabaseの画面にもユーザーが追加されているのが確認できるはずです。**
+
+  ![Supabase1](../../Materials/2.Auth/8.png)
 
 ### 3.3. ログインページ (UI作成)
 
@@ -291,108 +303,156 @@ export default function LoginPage() {
 ```
 
 - **ポイント:**
-  - 登録ページとほぼ同様の構成です。
   - `handleLogin` 関数で `supabase.auth.signInWithPassword` を呼び出してログイン処理を行います。
   - 成功すればホームページにリダイレクトします。
 
-（画像イメージ: `../../資料/2. 認証/3.png` - 作成したログインページのスクリーンショット）
+**このページが完成したら、http://localhost:3000/login**を開いてみましょう。以下のように表示されると思います。
+
+### 完成後の写真
+![Supabase1](../../Materials/2.Auth/9.png)
+
+**まだログアウトが出来ないので、ログインしようとするとエラーが出るかもしれません。とりあえず次に進みましょう。**
 
 ### 3.4. ログアウト機能の実装
 
 アプリからログアウトするためのボタンと処理を追加します。
-ここでは仮として、左サイドバーにログアウトボタンを設置します。
+左サイドバーにログアウトボタンを設置します。
 
-- **ファイルパス:** `components/sidebar/LeftSidebar.tsx` (なければ新規作成、または既存のものを修正)
+- **ファイルパス:** `components/sidebar/LeftSidebar.tsx` を編集します。
 
 ```tsx
 // components/sidebar/LeftSidebar.tsx
 "use client";
+import { Bell, Home, MoreHorizontal, Search, User } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import React, { useState, useRef, useEffect } from "react";
+import { myProfile } from "@/data/profile";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
-// 他に必要なインポートがあれば追加 (例: Link, ユーザー情報表示用フックなど)
-
-export function LeftSidebar() {
+export const LeftSidebar = () => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
   const supabase = createClient();
 
+  // ログアウト処理の追加
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
+
     if (error) {
-      console.error('Error logging out:', error.message);
-      alert('ログアウトに失敗しました。');
-      return;
+      console.error("Error logging out:", error.message);
+      alert(`ログアウトエラー: ${error.message}`);
+    } else {
+      console.log("Logged out successfully");
+      alert("ログアウトしました。");
+      router.push("/login");
+      router.refresh();
     }
-    alert('ログアウトしました。');
-    router.push('/login'); // ログインページへリダイレクト
-    router.refresh();
   };
+  // 外側クリック検出のための関数
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        menuRef.current &&
+        buttonRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setShowMenu(false);
+      }
+    };
 
-  // ログイン状態によって表示を変える場合は、ここでユーザー情報を取得するロジックが必要になります。
-  // 例えば、useEffect と useState を使ってユーザー情報を保持し、
-  // ユーザーがいればプロフィール情報やログアウトボタンを、いなければログイン/登録リンクを表示するなど。
-  // このチャプターではまずログアウト機能の実装に集中します。
+    // イベントリスナーの登録
+    document.addEventListener("mousedown", handleOutsideClick);
+
+    // クリーンアップ関数
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
 
   return (
-    <aside className="h-screen w-64 bg-gray-800 p-4 text-white fixed top-0 left-0">
-      <nav>
-        <ul>
-          <li className="mb-2">
-            <a href="/" className="hover:text-blue-300">ホーム</a>
-          </li>
-          {/* 他のナビゲーションリンク */}
-        </ul>
-      </nav>
+    <div className="sticky top-0 h-screen text-white">
+      <div className="bg-black h-full w-full flex flex-col justify-between border-r border-gray-800">
+        <div className="flex flex-col gap-2">
+          {/* ロゴ */}
+          <Link href="/" className="w-full h-12 p-4">
+            <Image src="/X.png" alt="logo" width={40} height={40} />
+          </Link>
+          {/* ホーム */}
+          <Link href="/" className="mt-10 px-2 flex rounded-full">
+            <div className="flex items-center hover:bg-gray-900 rounded-full px-4 py-3">
+              <Home />
+              <p className="ml-3 hidden lg:block">ホーム</p>
+            </div>
+          </Link>
+          {/* 話題を検索 */}
+          <Link href="/explore" className="px-2 flex rounded-full">
+            <div className="flex items-center hover:bg-gray-900 rounded-full px-4 py-3">
+              <Search />
+              <p className="ml-3 hidden lg:block">話題を検索</p>
+            </div>
+          </Link>
+          {/* 通知 */}
+          <Link href="/notifications" className="px-2 flex rounded-full">
+            <div className="flex items-center hover:bg-gray-900 rounded-full px-4 py-3">
+              <Bell />
+              <p className="ml-3 hidden lg:block">通知</p>
+            </div>
+          </Link>
+          {/* プロフィール */}
+          <Link href="/profile" className="px-2 flex rounded-full">
+            <div className="flex items-center hover:bg-gray-900 rounded-full px-4 py-3">
+              <User />
+              <p className="ml-3 hidden lg:block">プロフィール</p>
+            </div>
+          </Link>
+        </div>
+        {/* アカウント */}
+        <div className="px-3 mb-3 relative">
+          <button
+            ref={buttonRef}
+            className="w-full flex items-center justify-between p-3 hover:bg-gray-800 rounded-full"
+            onClick={() => setShowMenu(!showMenu)}
+          >
+            <div className="flex items-center">
+              <div className="mr-4">
+                <div className="w-8 h-8 rounded-full bg-gray-600"></div>
+              </div>
+              <div className="text-left hidden lg:block">
+                <p className="font-bold text-sm">{myProfile.name}</p>
+                <p className="text-gray-500 text-xs">@{myProfile.userId}</p>
+              </div>
+            </div>
+            <MoreHorizontal size={18} className="text-white hidden lg:block" />
+          </button>
 
-      {/* ログアウトボタン (仮) */}
-      <div className="absolute bottom-4 left-4 right-4">
-        <button
-          onClick={handleLogout}
-          className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150"
-        >
-          ログアウト
-        </button>
+          {/* アカウントメニュー */}
+          {showMenu && (
+            <div
+              ref={menuRef}
+              className="absolute bottom-full left-3 mb-2 w-60 bg-black rounded-xl shadow-lg border border-gray-800 overflow-hidden z-50 hover:bg-gray-900"
+            >
+              <button className="p-4 cursor-pointer text-white" onClick={handleLogout}>
+                @{myProfile.userId}からログアウト
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </aside>
+    </div>
   );
-}
-```
-
-- **ポイント:**
-  - `handleLogout` 関数で `supabase.auth.signOut()` を呼び出してログアウトします。
-  - 成功後、ログインページにリダイレクトします。
-  - この `LeftSidebar` コンポーネントを、アプリ全体のレイアウトファイル (`app/layout.tsx`) で読み込んで表示するようにします。
-
-**`app/layout.tsx` での `LeftSidebar` の組み込み例:**
-
-```tsx
-// app/layout.tsx
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { LeftSidebar } from "@/components/sidebar/LeftSidebar"; // パスは適宜調整
-
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "X-Clone",
-  description: "X-Clone by Next.js",
 };
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="ja">
-      <body className={`${inter.className} bg-gray-900 flex`}>
-        <LeftSidebar />
-        <main className="flex-1 p-4 ml-64"> {/* ml-64 はサイドバーの幅に合わせる */}
-          {children}
-        </main>
-      </body>
-    </html>
-  );
-}
 ```
+
+**このページが完成したら、左サイドバー下部から、「@aaaからログアウト」というボタンを押すと、「ログアウトしました。」と表示されると思います。**
+
+**また、ログインもできるか確認しておきましょう**
+
+---
+
+お疲れ様でした！これでチャプター3は終了です。
+次のチャプターでは、データベースにユーザの詳細なデータを保存する場所を作り、プロフィールを正しく表示できるようにします。
