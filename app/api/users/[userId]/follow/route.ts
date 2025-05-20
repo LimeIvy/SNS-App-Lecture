@@ -1,10 +1,10 @@
 import { createClient } from "@/utils/supabase/server";
-import { NextResponse } from "next/server";
+import { Hono, Context } from "hono";
+import { NextRequest } from "next/server";
 
-export async function POST(
-  request: Request,
-  { params }: { params: { userId: string } }
-) {
+const app = new Hono();
+
+app.post(async (c: Context) => {
   const supabase = await createClient();
 
   const {
@@ -12,13 +12,13 @@ export async function POST(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    return c.json({ message: "Unauthorized" }, 401);
   }
 
-  const targetUserId = params.userId;
+  const targetUserId = c.req.param("userId");
 
   if (user.id === targetUserId) {
-    return new NextResponse("Cannot follow yourself", { status: 400 });
+    return c.json({ message: "Cannot follow yourself" }, 400);
   }
 
   try {
@@ -29,14 +29,21 @@ export async function POST(
     if (error) {
       console.error("Follow Error:", error);
       if (error.code === "23505") {
-        return new NextResponse("Already following", { status: 409 });
+        return c.json({ message: "Already following" }, 409);
       }
-      return new NextResponse("Internal Server Error", { status: 500 });
+      return c.json({ message: "Internal Server Error" }, 500);
     }
 
-    return new NextResponse("Followed successfully", { status: 201 });
+    return c.json({ message: "Followed successfully" }, 201);
   } catch (err) {
     console.error("API Error:", err);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return c.json({ message: "Internal Server Error" }, 500);
   }
+});
+
+export async function POST(
+  request: NextRequest,
+  context: { params: { userId: string } }
+) {
+  return app.fetch(request, context);
 }

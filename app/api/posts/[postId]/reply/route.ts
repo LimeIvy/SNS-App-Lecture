@@ -1,10 +1,10 @@
 import { createClient } from "@/utils/supabase/server";
-import { NextResponse } from "next/server";
+import { Hono, Context } from "hono";
+import { NextRequest } from "next/server";
 
-export async function POST(
-  request: Request,
-  { params }: { params: { postId: string } }
-) {
+const app = new Hono();
+
+app.post(async (c: Context) => {
   const supabase = await createClient();
 
   const {
@@ -12,27 +12,25 @@ export async function POST(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    return c.json({ message: "Unauthorized" }, 401);
   }
 
-  const targetPostId = params.postId;
+  const targetPostId = c.req.param("postId");
 
   let requestBody;
   try {
-    requestBody = await request.json();
+    requestBody = await c.req.json();
   } catch (error) {
     console.error("Request body parsing error:", error);
-    return new NextResponse("Invalid request body", { status: 400 });
+    return c.json({ message: "Invalid request body" }, 400);
   }
 
   const content = requestBody.content;
 
   if (!content || typeof content !== "string" || content.trim() === "") {
-    return new NextResponse(
-      "Content is required and must be a non-empty string",
-      {
-        status: 400,
-      }
+    return c.json(
+      { message: "Content is required and must be a non-empty string" },
+      400
     );
   }
 
@@ -50,14 +48,21 @@ export async function POST(
     if (error) {
       console.error("Reply Creation Error:", error);
       if (error.code === "23503") {
-        return new NextResponse("Invalid post_id or user_id", { status: 400 });
+        return c.json({ message: "Invalid post_id or user_id" }, 400);
       }
-      return new NextResponse("Internal Server Error", { status: 500 });
+      return c.json({ message: "Internal Server Error" }, 500);
     }
 
-    return NextResponse.json(data, { status: 201 });
+    return c.json(data, 201);
   } catch (err) {
     console.error("API Error:", err);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return c.json({ message: "Internal Server Error" }, 500);
   }
+});
+
+export async function POST(
+  request: NextRequest,
+  context: { params: { postId: string } }
+) {
+  return app.fetch(request, context);
 }

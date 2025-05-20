@@ -1,15 +1,16 @@
 import { createClient } from "@/utils/supabase/server";
-import { NextResponse } from "next/server";
+import { Hono, Context } from "hono";
+import { NextRequest } from "next/server";
 
-export async function GET(request: Request) {
+const app = new Hono();
+
+app.get(async (c: Context) => {
   const supabase = await createClient();
 
-  const url = new URL(request.url);
-  const segments = url.pathname.split("/");
-  const postId = segments[segments.indexOf("posts") + 1];
+  const postId = c.req.param("postId");
 
   if (!postId) {
-    return new NextResponse("Post ID is required", { status: 400 });
+    return c.json({ message: "Post ID is required" }, 400);
   }
 
   try {
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
       .select(
         `
         *,
-        profile:profile (
+        profile: profile (
           id,
           name,
           icon
@@ -30,12 +31,19 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error("Replies Fetch Error:", error);
-      return new NextResponse("Internal Server Error", { status: 500 });
+      return c.json({ message: "Internal Server Error" }, 500);
     }
 
-    return NextResponse.json(data || []);
+    return c.json(data || []);
   } catch (err) {
     console.error("API Error:", err);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return c.json({ message: "Internal Server Error" }, 500);
   }
+});
+
+export async function GET(
+  request: NextRequest,
+  context: { params: { postId: string } }
+) {
+  return app.fetch(request, context);
 }
