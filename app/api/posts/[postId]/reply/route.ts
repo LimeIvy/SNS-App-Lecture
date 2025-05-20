@@ -3,11 +3,10 @@ import { NextResponse } from "next/server";
 
 export async function POST(
   request: Request,
-  { params: routeParamsFromContext }: { params: { postId: string } }
+  { params }: { params: { postId: string } }
 ) {
   const supabase = await createClient();
 
-  // 1. 認証状態の確認
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -16,12 +15,8 @@ export async function POST(
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const params = await routeParamsFromContext;
-
-  // 2. 返信対象の投稿IDを取得
   const targetPostId = params.postId;
 
-  // 3. リクエストボディから返信内容を取得
   let requestBody;
   try {
     requestBody = await request.json();
@@ -35,35 +30,32 @@ export async function POST(
   if (!content || typeof content !== "string" || content.trim() === "") {
     return new NextResponse(
       "Content is required and must be a non-empty string",
-      { status: 400 }
+      {
+        status: 400,
+      }
     );
   }
 
   try {
-    // 4. replies テーブルにレコードを挿入
     const { data, error } = await supabase
       .from("replies")
       .insert({
         user_id: user.id,
         post_id: targetPostId,
-        content: content.trim(), // 前後の空白を除去
+        content: content.trim(),
       })
-      .select() // 挿入したデータを返す (任意)
+      .select()
       .single();
 
-    // 5. エラーハンドリング
     if (error) {
       console.error("Reply Creation Error:", error);
-      // 外部キー制約違反 (存在しない投稿への返信など) を考慮
       if (error.code === "23503") {
-        // foreign_key_violation
         return new NextResponse("Invalid post_id or user_id", { status: 400 });
       }
       return new NextResponse("Internal Server Error", { status: 500 });
     }
 
-    // 6. 成功レスポンス (作成されたリソースを返すのが一般的)
-    return NextResponse.json(data, { status: 201 }); // Created
+    return NextResponse.json(data, { status: 201 });
   } catch (err) {
     console.error("API Error:", err);
     return new NextResponse("Internal Server Error", { status: 500 });

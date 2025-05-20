@@ -3,22 +3,17 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   request: Request,
-  context: Promise<{ params: { postId: string } }>
+  context: { params: { postId: string } }
 ) {
   const supabase = await createClient();
 
-  // context を await して params を取り出します。
-  const { params } = await context;
-
-  // 1. 返信を取得したい投稿のID
-  const targetPostId = params.postId;
+  const { postId: targetPostId } = context.params;
 
   if (!targetPostId) {
     return new NextResponse("Post ID is required", { status: 400 });
   }
 
   try {
-    // 2. replies テーブルからデータを取得 (profile テーブルと結合)
     const { data, error } = await supabase
       .from("replies")
       .select(
@@ -32,16 +27,14 @@ export async function GET(
       `
       )
       .eq("post_id", targetPostId)
-      .order("created_at", { ascending: false }); // 新しい順
+      .order("created_at", { ascending: false });
 
-    // 3. エラーハンドリング
     if (error) {
       console.error("Replies Fetch Error:", error);
       return new NextResponse("Internal Server Error", { status: 500 });
     }
 
-    // 4. 成功レスポンス
-    return NextResponse.json(data || []); // データがない場合は空配列を返す
+    return NextResponse.json(data || []);
   } catch (err) {
     console.error("API Error:", err);
     return new NextResponse("Internal Server Error", { status: 500 });
