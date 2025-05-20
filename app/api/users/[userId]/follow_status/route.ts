@@ -1,10 +1,10 @@
 import { createClient } from "@/utils/supabase/server";
-import { Hono, Context } from "hono";
-import { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
-const app = new Hono();
-
-app.get(async (c: Context) => {
+export async function GET(
+  request: Request,
+  { params }: { params: { userId: string } }
+) {
   const supabase = await createClient();
 
   const {
@@ -12,13 +12,13 @@ app.get(async (c: Context) => {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return c.json({ isFollowing: false });
+    return NextResponse.json({ isFollowing: false });
   }
 
-  const targetUserId = c.req.param("userId");
+  const targetUserId = params.userId;
 
   if (user.id === targetUserId) {
-    return c.json({ isFollowing: false });
+    return NextResponse.json({ isFollowing: false });
   }
 
   try {
@@ -32,20 +32,13 @@ app.get(async (c: Context) => {
 
     if (error) {
       console.error("Follow Status Check Error:", error);
-      return c.json({ message: "Internal Server Error" }, 500);
+      return new NextResponse("Internal Server Error", { status: 500 });
     }
 
     const isFollowing = data !== null;
-    return c.json({ isFollowing });
+    return NextResponse.json({ isFollowing });
   } catch (err) {
     console.error("API Error:", err);
-    return c.json({ message: "Internal Server Error" }, 500);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
-});
-
-export async function GET(
-  request: NextRequest,
-  context: { params: { userId: string } }
-) {
-  return app.fetch(request, context);
 }
