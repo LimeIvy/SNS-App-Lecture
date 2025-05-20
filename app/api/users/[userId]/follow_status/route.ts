@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   request: Request,
-  { params }: { params: { userId: string } }
+  { params: routeParamsFromContext }: { params: { userId: string } }
 ) {
   const supabase = await createClient();
 
@@ -16,6 +16,8 @@ export async function GET(
     // 認証されていない場合はフォローしているはずがない
     return NextResponse.json({ isFollowing: false });
   }
+
+  const params = await routeParamsFromContext;
 
   // 2. フォロー状態を確認したい対象のユーザーIDを取得
   const targetUserId = params.userId;

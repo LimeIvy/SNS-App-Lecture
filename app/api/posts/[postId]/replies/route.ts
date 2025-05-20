@@ -3,9 +3,11 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   request: Request,
-  { params }: { params: { postId: string } }
+  { params: routeParamsFromContext }: { params: { postId: string } }
 ) {
   const supabase = await createClient();
+
+  const params = await routeParamsFromContext;
 
   // 1. 返信を取得したい投稿のID
   const targetPostId = params.postId;

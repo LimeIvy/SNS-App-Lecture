@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(
   request: Request,
-  { params }: { params: { postId: string } }
+  { params: routeParamsFromContext }: { params: { postId: string } }
 ) {
   const supabase = await createClient();
 
@@ -15,6 +15,8 @@ export async function POST(
   if (!user) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
+
+  const params = await routeParamsFromContext;
 
   // 2. 返信対象の投稿IDを取得
   const targetPostId = params.postId;
