@@ -1,15 +1,14 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
 
-export async function GET(
-  request: Request,
-  context: { params: { postId: string } }
-) {
+export async function GET(request: Request) {
   const supabase = await createClient();
 
-  const { postId: targetPostId } = context.params;
+  const url = new URL(request.url);
+  const segments = url.pathname.split("/");
+  const postId = segments[segments.indexOf("posts") + 1];
 
-  if (!targetPostId) {
+  if (!postId) {
     return new NextResponse("Post ID is required", { status: 400 });
   }
 
@@ -19,14 +18,14 @@ export async function GET(
       .select(
         `
         *,
-        profile: profile (
+        profile:profile (
           id,
           name,
           icon
         )
       `
       )
-      .eq("post_id", targetPostId)
+      .eq("post_id", postId)
       .order("created_at", { ascending: false });
 
     if (error) {
